@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giải Thích Trọng Số - AHP</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Header -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="#">AHP Hỗ trợ ra quyết định đầu tư tài chính</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Close">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('routes.index') }}">Trang chủ</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Tiêu đề -->
+        <h2 class="text-center mb-4">Giải Thích Trọng Số</h2>
+
+        <!-- Danh sách giải thích -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                Chi Tiết Điểm Số
+            </div>
+            <div class="card-body">
+                {% for explanation in explanations %}
+                    <div class="mb-4">
+                        <h4>{{ explanation.alternative }}</h4>
+                        <p><strong>Tổng điểm: {{ explanation.total_score|round(4) }}</strong></p>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Tiêu chí</th>
+                                        <th>Trọng số tiêu chí</th>
+                                        <th>Trọng số phương án</th>
+                                        <th>Đóng góp</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for contrib in explanation.contributions %}
+                                        <tr>
+                                            <td>{{ contrib.criterion }}</td>
+                                            <td>{{ contrib.criteria_weight|round(4) }}</td>
+                                            <td>{{ contrib.alternative_weight|round(4) }}</td>
+                                            <td>{{ contrib.contribution|round(4) }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Nút quay lại -->
+        <div class="text-center">
+            <a href="{{ url_for('routes.index') }}" class="btn btn-primary">Quay Lại Trang Chủ</a>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-primary text-white text-center py-3 mt-4">
+        <p>© 2025 AHP Hỗ trợ ra quyết định đầu tư tài chính _Nhom12_10DHCNPM1.</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

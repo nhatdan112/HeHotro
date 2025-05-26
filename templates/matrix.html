@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nhập Ma Trận So Sánh - AHP</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Header -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="#">AHP Hỗ trợ ra quyết định đầu tư tài chính</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Close">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('routes.index') }}">Trang chủ</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Thông báo -->
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="alert alert-info alert-dismissible fade show" role="alert">
+                    {% for message in messages %}
+                        <div>{{ message }}</div>
+                    {% endfor %}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Tiêu đề -->
+        <h2 class="text-center mb-4">
+            Nhập Ma Trận So Sánh
+            {% if type == 'criteria' %}
+                Tiêu Chí
+            {% else %}
+                Phương Án ({{ name }})
+            {% endif %}
+        </h2>
+
+        <!-- Ma trận so sánh -->
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                Ma Trận So Sánh
+            </div>
+            <div class="card-body">
+                <form method="POST" id="matrix-form">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    {% for item in items %}
+                                        <th>{{ item }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for i in range(items|length) %}
+                                    <tr>
+                                        <td>{{ items[i] }}</td>
+                                        {% for j in range(items|length) %}
+                                            {% if i == j %}
+                                                <td class="bg-light">1</td>
+                                            {% elif i < j %}
+                                                <td>
+                                                    <input type="number" step="0.1" min="0.1" max="9" name="{{ i }}_{{ j }}" value="{{ matrix[i][j] }}" class="form-control form-control-sm matrix-input" required>
+                                                </td>
+                                            {% else %}
+                                                <td class="bg-light">{{ (1/matrix[j][i])|round(2) }}</td>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="text-center">
+                        <button type="button" class="btn btn-warning me-2" id="suggest-matrix-btn">Gợi ý ma trận</button>
+                        <button type="submit" class="btn btn-primary me-2">Lưu Ma Trận</button>
+                        <a href="{{ url_for('routes.index') }}" class="btn btn-secondary">Hủy</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-primary text-white text-center py-3 mt-4">
+        <p>© 2025 AHP Hỗ trợ ra quyết định đầu tư tài chính _Nhom12_10DHCNPM1.</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Gọi API để gợi ý ma trận khi nhấn nút "Gợi ý ma trận"
+        document.getElementById('suggest-matrix-btn').addEventListener('click', function() {
+            const type = '{{ type }}';
+            const name = '{{ name }}';
+            const items = {{ items|tojson }};
+
+            fetch('/api/suggest_matrix', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ type: type, name: name, items: items }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+                // Điền giá trị gợi ý vào các ô nhập liệu
+                const inputs = document.querySelectorAll('.matrix-input');
+                inputs.forEach(input => {
+                    const [i, j] = input.name.split('_').map(Number);
+                    input.value = data.matrix[i][j];
+                });
+                // Cập nhật các ô phía dưới đường chéo chính
+                const rows = document.querySelectorAll('tbody tr');
+                rows.forEach((row, i) => {
+                    const cells = row.querySelectorAll('td');
+                    for (let j = 0; j < cells.length; j++) {
+                        if (i > j) {
+                            cells[j + 1].textContent = (1 / data.matrix[j][i]).toFixed(2);
+                        }
+                    }
+                });
+            })
+            .catch(error => {
+                console.error('Error fetching suggested matrix:', error);
+                alert('Không thể lấy gợi ý ma trận.');
+            });
+        });
+    </script>
+</body>
+</html>

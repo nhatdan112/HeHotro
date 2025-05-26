@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quyết định AHP</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Header -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="#">AHP Hỗ trợ ra quyết định đầu tư tài chính</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('routes.index') }}">Trang chủ</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Thông báo -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="alert alert-dismissible fade show" role="alert">
+                    {% for category, message in messages %}
+                        <div class="alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Tabs -->
+        <ul class="nav nav-tabs" id="myTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="ahp-tab" data-bs-toggle="tab" data-bs-target="#ahp" type="button" role="tab" aria-controls="ahp" aria-selected="true">Quản lý AHP</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="finance-tab" data-bs-toggle="tab" data-bs-target="#finance" type="button" role="tab" aria-controls="finance" aria-selected="false">Tình hình tài chính</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="matrix-assist-tab" data-bs-toggle="tab" data-bs-target="#matrix-assist" type="button" role="tab" aria-controls="matrix-assist" aria-selected="false">Hỗ trợ ma trận tiêu chí</button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="myTabContent">
+            <!-- Tab Quản lý AHP -->
+            <div class="tab-pane fade show active" id="ahp" role="tabpanel" aria-labelledby="ahp-tab">
+                <div class="row mt-4">
+                    <!-- Cột trái: Thêm tiêu chí, Thêm phương án, Nhập ma trận tiêu chí, Tính toán kết quả -->
+                    <div class="col-md-3">
+                        <!-- Thêm tiêu chí -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-primary text-white">
+                                Thêm tiêu chí
+                            </div>
+                            <div class="card-body">
+                                <!-- Biểu mẫu thêm tiêu chí -->
+                                <form method="POST" class="row g-3">
+                                    <div class="col-12">
+                                        <input type="text" name="criteria" class="form-control" placeholder="Nhập tên tiêu chí" required>
+                                    </div>
+                                    <div class="col-12">
+                                        <button type="submit" name="add_criteria" class="btn btn-primary w-100">Thêm tiêu chí</button>
+                                    </div>
+                                </form>
+                                <!-- Biểu mẫu nhập Excel -->
+                                <form method="POST" enctype="multipart/form-data" action="{{ url_for('routes.import_excel') }}" class="row g-3 mt-3">
+                                    <div class="col-12">
+                                        <label for="excel_file" class="form-label">Nhập từ Excel</label>
+                                        <input type="file" class="form-control" id="excel_file" name="excel_file" accept=".xlsx,.xls">
+                                    </div>
+                                    <div class="col-12">
+                                        <button type="submit" name="import_excel" class="btn btn-secondary w-100">Nhập Excel</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Thêm phương án -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-primary text-white">
+                                Thêm phương án
+                            </div>
+                            <div class="card-body">
+                                <form method="POST" class="row g-3">
+                                    <div class="col-12">
+                                        <input type="text" name="alternative" class="form-control" placeholder="Nhập tên phương án" required>
+                                    </div>
+                                    <div class="col-12">
+                                        <button type="submit" name="add_alternative" class="btn btn-primary w-100">Thêm phương án</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Nhập ma trận tiêu chí -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-primary text-white">
+                                Nhập ma trận tiêu chí
+                            </div>
+                            <div class="card-body">
+                                <a href="{{ url_for('routes.matrix', loai='criteria', name='None') }}" class="btn btn-success w-100">Nhập ma trận tiêu chí</a>
+                            </div>
+                        </div>
+
+                        <!-- Tính toán kết quả -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-primary text-white">
+                                Tính toán kết quả
+                            </div>
+                            <div class="card-body">
+                                <form method="POST" action="{{ url_for('routes.calculate') }}">
+                                    <button type="submit" class="btn btn-success w-100">Tính toán kết quả</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cột giữa: Danh sách tiêu chí, Danh sách phương án -->
+                    <div class="col-md-5">
+                        <!-- Danh sách tiêu chí -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-primary text-white">
+                                Danh sách tiêu chí
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Tiêu chí</th>
+                                                <th>Hành động</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for crit in criteria %}
+                                                <tr>
+                                                    <td>{{ crit['ten'] }}</td>
+                                                    <td>
+                                                        <form method="POST" style="display:inline;">
+                                                            <input type="hidden" name="crit_id" value="{{ crit['_id'] }}">
+                                                            <input type="hidden" name="crit_name" value="{{ crit['ten'] }}">
+                                                            <button type="submit" name="delete_criteria" class="btn btn-danger btn-sm">Xóa</button>
+                                                        </form>
+                                                        <a href="{{ url_for('routes.matrix', loai='phuong_an', name=crit['ten']) }}" class="btn btn-info btn-sm">Nhập ma trận phương án</a>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                    {% if not criteria %}
+                                        <p>Chưa có tiêu chí nào.</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Danh sách phương án -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-primary text-white">
+                                Danh sách phương án
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Phương án</th>
+                                                <th>Hành động</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for alt in alternatives %}
+                                                <tr>
+                                                    <td>{{ alt['ten'] }}</td>
+                                                    <td>
+                                                        <form method="POST" style="display:inline;">
+                                                            <input type="hidden" name="alt_id" value="{{ alt['_id'] }}">
+                                                            <button type="submit" name="delete_alternative" class="btn btn-danger btn-sm">Xóa</button>
+                                                        </form>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                    {% if not alternatives %}
+                                        <p>Chưa có phương án nào.</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cột phải: Kết quả tính toán trước -->
+                    <div class="col-md-4">
+                        <div class="card mb-4">
+                            <div class="card-header bg-primary text-white">
+                                Kết quả tính toán trước
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Thời gian</th>
+                                                <th>Xếp hạng</th>
+                                                <th>Hành động</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for result in results %}
+                                                <tr>
+                                                    <td>{{ result['thoi_gian'] }}</td>
+                                                    <td>
+                                                        {% if result['ranking'] %}
+                                                            {% for rank in result['ranking'][:3] %}
+                                                                {{ rank['name'] }}: {{ rank['score']|round(4) }}<br>
+                                                            {% endfor %}
+                                                        {% else %}
+                                                            Chưa có xếp hạng
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        <a href="{{ url_for('routes.weights_explain', result_id=result['_id']) }}" class="btn btn-info btn-sm">Xem chi tiết</a>
+                                                        <form method="POST" style="display:inline;">
+                                                            <input type="hidden" name="result_id" value="{{ result['_id'] }}">
+                                                            <button type="submit" name="delete_result" class="btn btn-danger btn-sm">Xóa</button>
+                                                        </form>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                    {% if not results %}
+                                        <p>Chưa có kết quả nào.</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Tình hình tài chính -->
+            <div class="tab-pane fade" id="finance" role="tabpanel" aria-labelledby="finance-tab">
+                <div class="row mt-4">
+                    <!-- Cổ phiếu -->
+                    <div class="col-md-12">
+                        <div class="card mb-4">
+                            <div class="card-header bg-primary text-white">
+                                Cổ phiếu
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover" id="stocks-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Mã cổ phiếu</th>
+                                                <th>Giá hiện tại</th>
+                                                <th>Thay đổi (%)</th>
+                                                <th>Khối lượng giao dịch</th>
+                                                <th>Thời gian cập nhật</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quỹ ETF -->
+                    <div class="col-md-12">
+                        <div class="card mb-4">
+                            <div class="card-header bg-primary text-white">
+                                Quỹ ETF
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover" id="etfs-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Mã ETF</th>
+                                                <th>Giá hiện tại</th>
+                                                <th>Mô tả</th>
+                                                <th>Thời gian cập nhật</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tiền điện tử -->
+                    <div class="col-md-12">
+                        <div class="card mb-4">
+                            <div class="card-header bg-primary text-white">
+                                Tiền điện tử
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover" id="cryptos-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Mã tiền điện tử</th>
+                                                <th>Giá hiện tại</th>
+                                                <th>Thay đổi (%)</th>
+                                                <th>Khối lượng giao dịch</th>
+                                                <th>Thời gian cập nhật</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Hàng hóa -->
+                    <div class="col-md-12">
+                        <div class="card mb-4">
+                            <div class="card-header bg-primary text-white">
+                                Hàng hóa
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover" id="commodities-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Mã hàng hóa</th>
+                                                <th>Giá hiện tại</th>
+                                                <th>Thay đổi (%)</th>
+                                                <th>Khối lượng giao dịch</th>
+                                                <th>Thời gian cập nhật</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chỉ số kinh tế -->
+                    <div class="col-md-12">
+                        <div class="card mb-4">
+                            <div class="card-header bg-primary text-white">
+                                Chỉ số kinh tế
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover" id="economic-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Chỉ số</th>
+                                                <th>Giá trị</th>
+                                                <th>Ngày cập nhật</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Hỗ trợ ma trận tiêu chí -->
+            <div class="tab-pane fade" id="matrix-assist" role="tabpanel" aria-labelledby="matrix-assist-tab">
+                <h2 class="mt-4">Hỗ trợ điền ma trận tiêu chí</h2>
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        Hướng dẫn điền ma trận tiêu chí
+                    </div>
+                    <div class="card-body">
+                        <p>Ma trận tiêu chí được sử dụng để so sánh mức độ quan trọng giữa các tiêu chí trong AHP. Sử dụng thang đo Saaty từ 1 đến 9:</p>
+                        <ul>
+                            <li><strong>1</strong>: Hai tiêu chí có mức độ quan trọng ngang nhau.</li>
+                            <li><strong>3</strong>: Tiêu chí này quan trọng hơn một chút so với tiêu chí kia.</li>
+                            <li><strong>5</strong>: Tiêu chí này quan trọng hơn rõ rệt.</li>
+                            <li><strong>7</strong>: Tiêu chí này rất quan trọng hơn.</li>
+                            <li><strong>9</strong>: Tiêu chí này cực kỳ quan trọng hơn.</li>
+                            <li>Giá trị 2, 4, 6, 8: Các mức trung gian.</li>
+                        </ul>
+                        <p>Ví dụ: Nếu "Lợi nhuận" quan trọng hơn "Rủi ro" ở mức 3, thì trong ma trận, ô [Lợi nhuận, Rủi ro] sẽ là 3, và ô [Rủi ro, Lợi nhuận] sẽ là 1/3.</p>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        Gợi ý giá trị dựa trên dữ liệu tài chính
+                    </div>
+                    <div class="card-body">
+                        <p>Nhập hai tiêu chí và mã tài sản (VD: cổ phiếu AAPL) để nhận gợi ý giá trị so sánh:</p>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <input type="text" id="criterion1" class="form-control" placeholder="Tiêu chí 1 (VD: Lợi nhuận)">
+                            </div>
+                            <div class="col-md-4">
+                                <input type="text" id="criterion2" class="form-control" placeholder="Tiêu chí 2 (VD: Rủi ro)">
+                            </div>
+                            <div class="col-md-4">
+                                <input type="text" id="assetSymbol" class="form-control" placeholder="Mã tài sản (VD: AAPL)">
+                            </div>
+                            <div class="col-12">
+                                <button class="btn btn-primary" onclick="suggestMatrixValue()">Gợi ý giá trị</button>
+                            </div>
+                        </div>
+                        <div id="suggestionResult" class="mt-3"></div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        Kiểm tra tính nhất quán của ma trận
+                    </div>
+                    <div class="card-body">
+                        <p>Nhập ma trận tiêu chí của bạn (dạng JSON) để kiểm tra tính nhất quán:</p>
+                        <textarea id="matrixInput" class="form-control" rows="5" placeholder='Ví dụ: [[1, 3], [1/3, 1]]'></textarea>
+                        <button class="btn btn-primary mt-2" onclick="checkConsistency()">Kiểm tra</button>
+                        <div id="consistencyResult" class="mt-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-primary text-white text-center py-3 mt-4">
+        <p>© 2025 AHP Hỗ trợ ra quyết định đầu tư tài chính _Nhom12_10DHCNPM1.</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Gọi API để lấy dữ liệu tài chính khi tab "Tình hình tài chính" được chọn
+        document.getElementById('finance-tab').addEventListener('shown.bs.tab', function (event) {
+            fetch('/api/finance_data')
+                .then(response => response.json())
+                .then(data => {
+                    // Cổ phiếu
+                    const stocksTableBody = document.querySelector('#stocks-table tbody');
+                    stocksTableBody.innerHTML = '';
+                    data.stocks.forEach(item => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${item.symbol}</td>
+                            <td>${item.price}</td>
+                            <td class="${item.change >= 0 ? 'text-success' : 'text-danger'}">${item.change}%</td>
+                            <td>${item.volume}</td>
+                            <td>${item.updated_at}</td>
+                        `;
+                        stocksTableBody.appendChild(row);
+                    });
+
+                    // Quỹ ETF
+                    const etfsTableBody = document.querySelector('#etfs-table tbody');
+                    etfsTableBody.innerHTML = '';
+                    data.etfs.forEach(item => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${item.symbol}</td>
+                            <td>${item.price}</td>
+                            <td>${item.description}</td>
+                            <td>${item.updated_at}</td>
+                        `;
+                        etfsTableBody.appendChild(row);
+                    });
+
+                    // Tiền điện tử
+                    const cryptosTableBody = document.querySelector('#cryptos-table tbody');
+                    cryptosTableBody.innerHTML = '';
+                    data.cryptos.forEach(item => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${item.symbol}</td>
+                            <td>${item.price}</td>
+                            <td class="${item.change >= 0 ? 'text-success' : 'text-danger'}">${item.change}%</td>
+                            <td>${item.volume}</td>
+                            <td>${item.updated_at}</td>
+                        `;
+                        cryptosTableBody.appendChild(row);
+                    });
+
+                    // Hàng hóa
+                    const commoditiesTableBody = document.querySelector('#commodities-table tbody');
+                    commoditiesTableBody.innerHTML = '';
+                    data.commodities.forEach(item => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${item.symbol}</td>
+                            <td>${item.price}</td>
+                            <td class="${item.change >= 0 ? 'text-success' : 'text-danger'}">${item.change}%</td>
+                            <td>${item.volume}</td>
+                            <td>${item.updated_at}</td>
+                        `;
+                        commoditiesTableBody.appendChild(row);
+                    });
+
+                    // Chỉ số kinh tế
+                    const economicTableBody = document.querySelector('#economic-table tbody');
+                    economicTableBody.innerHTML = '';
+                    data.economic_indicators.forEach(item => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${item.indicator}</td>
+                            <td>${item.value}</td>
+                            <td>${item.date}</td>
+                        `;
+                        economicTableBody.appendChild(row);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching finance data:', error);
+                    const tables = ['stocks-table', 'etfs-table', 'cryptos-table', 'commodities-table', 'economic-table'];
+                    tables.forEach(tableId => {
+                        const tableBody = document.querySelector(`#${tableId} tbody`);
+                        tableBody.innerHTML = '<tr><td colspan="5">Không thể tải dữ liệu tài chính.</td></tr>';
+                    });
+                });
+        });
+
+        // Gợi ý giá trị ma trận
+        async function suggestMatrixValue() {
+            const criterion1 = document.getElementById('criterion1').value;
+            const criterion2 = document.getElementById('criterion2').value;
+            const symbol = document.getElementById('assetSymbol').value;
+            const resultDiv = document.getElementById('suggestionResult');
+
+            try {
+                const response = await fetch('/api/suggest_matrix', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        loai: 'criteria',  <!-- Thay type thành loai -->
+                        name: null,
+                        items: [criterion1, criterion2],
+                        symbol: symbol
+                    })
+                });
+                const data = await response.json();
+                if (data.error) {
+                    resultDiv.innerHTML = `<p class="text-danger">${data.error}</p>`;
+                } else {
+                    const value = data.matrix[0][1];
+                    resultDiv.innerHTML = `
+                        <p>Gợi ý giá trị cho [${criterion1}, ${criterion2}]: <strong>${value}</strong></p>
+                        <p>Giá trị nghịch đảo [${criterion2}, ${criterion1}]: <strong>${(1/value).toFixed(2)}</strong></p>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="text-danger">Lỗi: Không thể lấy gợi ý ma trận!</p>`;
+            }
+        }
+
+        // Kiểm tra tính nhất quán
+        async function checkConsistency() {
+            const matrixInput = document.getElementById('matrixInput').value;
+            const resultDiv = document.getElementById('consistencyResult');
+            
+            try {
+                const matrix = JSON.parse(matrixInput);
+                const response = await fetch('/api/check_consistency', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ matrix: matrix })
+                });
+                const data = await response.json();
+                if (data.error) {
+                    resultDiv.innerHTML = `<p class="text-danger">${data.error}</p>`;
+                } else {
+                    resultDiv.innerHTML = `
+                        <p>Tỷ số nhất quán (CR): <strong>${data.cr.toFixed(4)}</strong></p>
+                        <p class="${data.is_consistent ? 'text-success' : 'text-danger'}">${data.message}</p>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="text-danger">Lỗi: Vui lòng nhập ma trận hợp lệ (dạng JSON)!</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

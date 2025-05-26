@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kết quả AHP</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        canvas {
+            max-width: 100%;
+            height: auto;
+        }
+        .chart-container {
+            margin-bottom: 30px;
+            min-height: 400px; /* Tăng chiều cao cho biểu đồ cột */
+            max-width: 100%;
+        }
+        .pie-chart-container {
+            max-width: 600px; /* Tăng kích thước biểu đồ tròn */
+            margin: 0 auto;
+            padding: 20px; /* Thêm padding để căn chỉnh đẹp */
+        }
+        .card-body h5 {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="#">AHP Hỗ trợ ra quyết định đầu tư tài chính</a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('routes.index') }}">Quay lại trang chủ</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <h1 class="mb-4">Kết quả AHP</h1>
+        <div class="mb-4">
+            <a href="{{ url_for('routes.export_pdf', result_id=result._id) }}" class="btn btn-success">Xuất báo cáo PDF</a>
+        </div>
+
+        <!-- Thông tin chung -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                Thông tin chung
+            </div>
+            <div class="card-body">
+                <p><strong>Thời gian:</strong> {{ result.thoi_gian | default('Không có dữ liệu') }}</p>
+            </div>
+        </div>
+
+        <!-- Bước 1: Phân tích ma trận tiêu chí -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                Bước 1: Phân tích ma trận tiêu chí
+            </div>
+            <div class="card-body">
+                {% if result.criteria_names and result.criteria_matrix and result.criteria_matrix.get('ma_tran') %}
+                    <h5>Ma trận so sánh cặp ban đầu</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="table-primary">
+                                <tr>
+                                    <th></th>
+                                    {% for tieu_chi in result.criteria_names %}
+                                        <th>{{ tieu_chi }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for i in range(result.criteria_names|length) %}
+                                    <tr>
+                                        <td class="fw-bold">{{ result.criteria_names[i] }}</td>
+                                        {% for j in range(result.criteria_names|length) %}
+                                            <td>{{ "%.4f" % result.criteria_matrix['ma_tran'][i][j] }}</td>
+                                        {% endfor %}
+                                    </tr>
+                                {% endfor %}
+                                <tr>
+                                    <td class="fw-bold">Tổng cột</td>
+                                    {% for tong in result.criteria_matrix['tong_cot'] %}
+                                        <td>{{ "%.4f" % tong }}</td>
+                                    {% endfor %}
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h5>Ma trận chuẩn hóa</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="table-primary">
+                                <tr>
+                                    <th></th>
+                                    {% for tieu_chi in result.criteria_names %}
+                                        <th>{{ tieu_chi }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for i in range(result.criteria_names|length) %}
+                                    <tr>
+                                        <td class="fw-bold">{{ result.criteria_names[i] }}</td>
+                                        {% for j in range(result.criteria_names|length) %}
+                                            <td>{{ "%.4f" % result.criteria_matrix['ma_tran_chuan_hoa'][i][j] }}</td>
+                                        {% endfor %}
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h5>Trọng số tiêu chí</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="table-primary">
+                                <tr>
+                                    <th>Tiêu chí</th>
+                                    <th>Trọng số</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for i in range(result.criteria_names|length) %}
+                                    <tr>
+                                        <td>{{ result.criteria_names[i] }}</td>
+                                        <td>{{ "%.4f" % result.criteria_matrix['trong_so'][i] }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h5>Biểu đồ trọng số tiêu chí</h5>
+                    <div class="chart-container">
+                        <canvas id="criteriaWeightsChart"></canvas>
+                    </div>
+
+                    <h5>Biểu đồ tròn trọng số tiêu chí</h5>
+                    <div class="pie-chart-container">
+                        <canvas id="criteriaPieChart"></canvas>
+                    </div>
+
+                    <h5>Kiểm tra tính nhất quán</h5>
+                    <ul class="list-group">
+                        <li class="list-group-item">
+                            Tổng trọng số: 
+                            {% if result.criteria_matrix.get('tong_trong_so') is defined and result.criteria_matrix.get('tong_trong_so') is not none %}
+                                {{ "%.4f" % result.criteria_matrix.get('tong_trong_so') }}
+                            {% else %}
+                                Không có dữ liệu
+                            {% endif %}
+                        </li>
+                        <li class="list-group-item">
+                            Vector nhất quán: 
+                            {% if result.criteria_matrix.get('vector_nhat_quan') is defined %}
+                                {{ result.criteria_matrix.get('vector_nhat_quan') | map('float') | map('round', 4) | join(', ') }}
+                            {% else %}
+                                Không có dữ liệu
+                            {% endif %}
+                        </li>
+                        <li class="list-group-item">
+                            Lambda Max: 
+                            {% if result.criteria_matrix.get('lambda_max') is defined and result.criteria_matrix.get('lambda_max') is not none %}
+                                {{ "%.4f" % result.criteria_matrix.get('lambda_max') }}
+                            {% else %}
+                                Không có dữ liệu
+                            {% endif %}
+                        </li>
+                        <li class="list-group-item">
+                            Chỉ số nhất quán (CI): 
+                            {% if result.criteria_matrix.get('ci') is defined and result.criteria_matrix.get('ci') is not none %}
+                                {{ "%.4f" % result.criteria_matrix.get('ci') }}
+                            {% else %}
+                                Không có dữ liệu
+                            {% endif %}
+                        </li>
+                        <li class="list-group-item">
+                            Tỷ số nhất quán (CR): 
+                            {% if result.criteria_matrix.get('cr') is defined and result.criteria_matrix.get('cr') is not none %}
+                                {{ "%.4f" % result.criteria_matrix.get('cr') }}
+                            {% else %}
+                                Không có dữ liệu
+                            {% endif %}
+                        </li>
+                        <li class="list-group-item {{ 'text-success' if result.criteria_matrix.get('cr') is defined and result.criteria_matrix.get('cr') is not none and result.criteria_matrix.get('cr') < 0.1 else 'text-danger' }}">
+                            {% if result.criteria_matrix.get('cr') is defined and result.criteria_matrix.get('cr') is not none %}
+                                {{ "Ma trận nhất quán (CR < 0.1)." if result.criteria_matrix.get('cr') < 0.1 else "Ma trận không nhất quán (CR >= 0.1). Vui lòng xem lại." }}
+                            {% else %}
+                                Không thể đánh giá tính nhất quán do thiếu dữ liệu.
+                            {% endif %}
+                        </li>
+                    </ul>
+                {% else %}
+                    <p class="text-danger">Không có dữ liệu ma trận tiêu chí để hiển thị.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Bước 2: Phân tích ma trận phương án -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                Bước 2: Phân tích ma trận phương án
+            </div>
+            <div class="card-body">
+                {% if result.criteria_names and result.alternative_names and result.alt_matrices %}
+                    {% for i in range(result.criteria_names|length) %}
+                        <h5>Ma trận phương án cho {{ result.criteria_names[i] }}</h5>
+                        
+                        <h6>Ma trận so sánh cặp ban đầu</h6>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover">
+                                <thead class="table-primary">
+                                    <tr>
+                                        <th></th>
+                                        {% for phuong_an in result.alternative_names %}
+                                            <th>{{ phuong_an }}</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for j in range(result.alternative_names|length) %}
+                                        <tr>
+                                            <td class="fw-bold">{{ result.alternative_names[j] }}</td>
+                                            {% for k in range(result.alternative_names|length) %}
+                                                <td>{{ "%.4f" % result.alt_matrices[i]['ma_tran'][j][k] }}</td>
+                                            {% endfor %}
+                                        </tr>
+                                    {% endfor %}
+                                    <tr>
+                                        <td class="fw-bold">Tổng cột</td>
+                                        {% for tong in result.alt_matrices[i]['tong_cot'] %}
+                                            <td>{{ "%.4f" % tong }}</td>
+                                        {% endfor %}
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <h6>Ma trận chuẩn hóa</h6>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover">
+                                <thead class="table-primary">
+                                    <tr>
+                                        <th></th>
+                                        {% for phuong_an in result.alternative_names %}
+                                            <th>{{ phuong_an }}</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for j in range(result.alternative_names|length) %}
+                                        <tr>
+                                            <td class="fw-bold">{{ result.alternative_names[j] }}</td>
+                                            {% for k in range(result.alternative_names|length) %}
+                                                <td>{{ "%.4f" % result.alt_matrices[i]['ma_tran_chuan_hoa'][j][k] }}</td>
+                                            {% endfor %}
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <h6>Trọng số phương án</h6>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover">
+                                <thead class="table-primary">
+                                    <tr>
+                                        <th>Phương án</th>
+                                        <th>Trọng số</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for j in range(result.alternative_names|length) %}
+                                        <tr>
+                                            <td>{{ result.alternative_names[j] }}</td>
+                                            <td>{{ "%.4f" % result.alt_weights_per_criterion[i][j] }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <h6>Biểu đồ trọng số phương án</h6>
+                        <div class="chart-container">
+                            <canvas id="altWeightsChart_{{ i }}"></canvas>
+                        </div>
+
+                        <h6>Kiểm tra tính nhất quán</h6>
+                        <ul class="list-group">
+                            <li class="list-group-item">
+                                Tổng trọng số: 
+                                {% if result.alt_matrices[i].get('tong_trong_so') is defined and result.alt_matrices[i].get('tong_trong_so') is not none %}
+                                    {{ "%.4f" % result.alt_matrices[i].get('tong_trong_so') }}
+                                {% else %}
+                                    Không có dữ liệu
+                                {% endif %}
+                            </li>
+                            <li class="list-group-item">
+                                Vector nhất quán: 
+                                {% if result.alt_matrices[i].get('vector_nhat_quan') is defined %}
+                                    {{ result.alt_matrices[i].get('vector_nhat_quan') | map('float') | map('round', 4) | join(', ') }}
+                                {% else %}
+                                    Không có dữ liệu
+                                {% endif %}
+                            </li>
+                            <li class="list-group-item">
+                                Lambda Max: 
+                                {% if result.alt_matrices[i].get('lambda_max') is defined and result.alt_matrices[i].get('lambda_max') is not none %}
+                                    {{ "%.4f" % result.alt_matrices[i].get('lambda_max') }}
+                                {% else %}
+                                    Không có dữ liệu
+                                {% endif %}
+                            </li>
+                            <li class="list-group-item">
+                                Chỉ số nhất quán (CI): 
+                                {% if result.alt_matrices[i].get('ci') is defined and result.alt_matrices[i].get('ci') is not none %}
+                                    {{ "%.4f" % result.alt_matrices[i].get('ci') }}
+                                {% else %}
+                                    Không có dữ liệu
+                                {% endif %}
+                            </li>
+                            <li class="list-group-item">
+                                Tỷ số nhất quán (CR): 
+                                {% if result.alt_matrices[i].get('cr') is defined and result.alt_matrices[i].get('cr') is not none %}
+                                    {{ "%.4f" % result.alt_matrices[i].get('cr') }}
+                                {% else %}
+                                    Không có dữ liệu
+                                {% endif %}
+                            </li>
+                            <li class="list-group-item {{ 'text-success' if result.alt_matrices[i].get('cr') is defined and result.alt_matrices[i].get('cr') is not none and result.alt_matrices[i].get('cr') < 0.1 else 'text-danger' }}">
+                                {% if result.alt_matrices[i].get('cr') is defined and result.alt_matrices[i].get('cr') is not none %}
+                                    {{ "Ma trận nhất quán (CR < 0.1)." if result.alt_matrices[i].get('cr') < 0.1 else "Ma trận không nhất quán (CR >= 0.1). Vui lòng xem lại." }}
+                                {% else %}
+                                    Không thể đánh giá tính nhất quán do thiếu dữ liệu.
+                                {% endif %}
+                            </li>
+                        </ul>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-danger">Không có dữ liệu ma trận phương án để hiển thị.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Góp phần của tiêu chí vào trọng số phương án -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                Góp phần của tiêu chí vào trọng số phương án
+            </div>
+            <div class="card-body">
+                {% if result.criteria_names and result.alternative_names and result.alt_weights_per_criterion %}
+                    <h5>Biểu đồ góp phần</h5>
+                    <div class="chart-container">
+                        <canvas id="criteriaContributionChart"></canvas>
+                    </div>
+                {% else %}
+                    <p class="text-danger">Không có dữ liệu để hiển thị biểu đồ góp phần.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Bước 3: Xếp hạng cuối cùng -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                Bước 3: Xếp hạng cuối cùng
+            </div>
+            <div class="card-body">
+                {% if result.ranking %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="table-primary">
+                                <tr>
+                                    <th>Phương án</th>
+                                    <th>Điểm số</th>
+                                    <th>Xếp hạng</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for muc in result.ranking %}
+                                    <tr>
+                                        <td>{{ muc.name | default('Không có dữ liệu') }}</td>
+                                        <td>{{ "%.4f" % muc.score }}</td>
+                                        <td>{{ loop.index }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h5>Biểu đồ xếp hạng</h5>
+                    <div class="chart-container">
+                        <canvas id="rankingChart"></canvas>
+                    </div>
+
+                    <h5>Biểu đồ tròn điểm số xếp hạng</h5>
+                    <div class="pie-chart-container">
+                        <canvas id="rankingPieChart"></canvas>
+                    </div>
+                {% else %}
+                    <p class="text-danger">Không có dữ liệu xếp hạng để hiển thị.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-primary text-white text-center py-3 mt-4">
+        <p>© 2025 AHP Hỗ trợ ra quyết định đầu tư tài chính _Nhom12_10DHCNPM1.</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Đăng ký plugin datalabels
+            Chart.register(ChartDataLabels);
+
+            // Font mặc định hỗ trợ tiếng Việt
+            Chart.defaults.font.family = 'Arial, "DejaVu Sans", sans-serif';
+            Chart.defaults.font.size = 14; // Tăng font chữ cho rõ hơn
+
+            // Hàm kiểm tra dữ liệu hợp lệ
+            function isValidData(data) {
+                return Array.isArray(data) && 
+                       data.length > 0 && 
+                       data.every(item => typeof item === 'number' && !isNaN(item) && item >= 0);
+            }
+
+            // Hàm kiểm tra ranking hợp lệ
+            function isValidRanking(ranking) {
+                return Array.isArray(ranking) && 
+                       ranking.length > 0 && 
+                       ranking.every(item => 
+                           item && 
+                           typeof item.name === 'string' && 
+                           typeof item.score === 'number' && 
+                           !isNaN(item.score) && 
+                           item.score >= 0
+                       );
+            }
+
+            {% if result.criteria_names and result.criteria_matrix and result.criteria_matrix.trong_so %}
+                // Biểu đồ trọng số tiêu chí
+                if (isValidData({{ result.criteria_matrix.trong_so | tojson | safe }})) {
+                    new Chart(document.getElementById('criteriaWeightsChart'), {
+                        type: 'bar',
+                        data: {
+                            labels: {{ result.criteria_names | tojson | safe }},
+                            datasets: [{
+                                label: 'Trọng số',
+                                data: {{ result.criteria_matrix.trong_so | tojson | safe }},
+                                backgroundColor: '#36A2EB',
+                                borderColor: '#1E90FF',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    title: { display: true, text: 'Trọng số', font: { size: 16 } },
+                                    ticks: { font: { size: 14 } }
+                                },
+                                x: {
+                                    title: { display: true, text: 'Tiêu chí', font: { size: 16 } },
+                                    ticks: { font: { size: 14 } }
+                                }
+                            },
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    titleFont: { size: 14 },
+                                    bodyFont: { size: 14 },
+                                    callbacks: {
+                                        label: function(context) {
+                                            return `${context.label}: ${context.raw.toFixed(4)}`;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                } else {
+                    console.warn('Dữ liệu trọng số tiêu chí không hợp lệ:', {{ result.criteria_matrix.trong_so | tojson | safe }});
+                }
+
+                // Biểu đồ tròn trọng số tiêu chí
+                if (isValidData({{ result.criteria_matrix.trong_so | tojson | safe }})) {
+                    new Chart(document.getElementById('criteriaPieChart'), {
+                        type: 'pie',
+                        data: {
+                            labels: {{ result.criteria_names | tojson | safe }},
+                            datasets: [{
+                                data: {{ result.criteria_matrix.trong_so | tojson | safe }},
+                                backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'],
+                                borderColor: '#FFFFFF',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                    labels: {
+                                        font: { family: 'Arial, "DejaVu Sans", sans-serif', size: 14 },
+                                        padding: 20
+                                    }
+                                },
+                                tooltip: {
+                                    titleFont: { size: 14 },
+                                    bodyFont: { size: 14 },
+                                    callbacks: {
+                                        label: function(context) {
+                                            let value = context.raw;
+                                            let sum = context.dataset.data.reduce((a, b) => a + b, 0);
+                                            let percentage = ((value / sum) * 100).toFixed(1);
+                                            return `${context.label}: ${value.toFixed(4)} (${percentage}%)`;
+                                        }
+                                    }
+                                },
+                                datalabels: {
+                                    formatter: (value, context) => {
+                                        let sum = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        let percentage = ((value / sum) * 100).toFixed(1);
+                                        return percentage >= 5 ? `${percentage}%` : '';
+                                    },
+                                    color: '#FFFFFF',
+                                    font: { weight: 'bold', size: 14 },
+                                    textAlign: 'center'
+                                }
+                            }
+                        }
+                    });
+                } else {
+                    console.warn('Dữ liệu cho biểu đồ tròn trọng số tiêu chí không hợp lệ:', {{ result.criteria_matrix.trong_so | tojson | safe }});
+                }
+            {% endif %}
+
+            {% if result.criteria_names and result.alternative_names and result.alt_weights_per_criterion %}
+                // Biểu đồ trọng số phương án cho mỗi tiêu chí
+                {% for i in range(result.criteria_names|length) %}
+                    if (isValidData({{ result.alt_weights_per_criterion[i] | tojson | safe }})) {
+                        new Chart(document.getElementById('altWeightsChart_{{ i }}'), {
+                            type: 'bar',
+                            data: {
+                                labels: {{ result.alternative_names | tojson | safe }},
+                                datasets: [{
+                                    label: 'Trọng số',
+                                    data: {{ result.alt_weights_per_criterion[i] | tojson | safe }},
+                                    backgroundColor: '#FF6384',
+                                    borderColor: '#FF4D6D',
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        title: { display: true, text: 'Trọng số', font: { size: 16 } },
+                                        ticks: { font: { size: 14 } }
+                                    },
+                                    x: {
+                                        title: { display: true, text: 'Phương án', font: { size: 16 } },
+                                        ticks: { font: { size: 14 } }
+                                    }
+                                },
+                                plugins: {
+                                    legend: { display: false },
+                                    title: {
+                                        display: true,
+                                        text: 'Trọng số phương án cho {{ result.criteria_names[i] }}',
+                                        font: { family: 'Arial, "DejaVu Sans", sans-serif', size: 16 }
+                                    },
+                                    tooltip: {
+                                        titleFont: { size: 14 },
+                                        bodyFont: { size: 14 },
+                                        callbacks: {
+                                            label: function(context) {
+                                                return `${context.label}: ${context.raw.toFixed(4)}`;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    } else {
+                        console.warn('Dữ liệu trọng số phương án cho {{ result.criteria_names[i] }} không hợp lệ:', {{ result.alt_weights_per_criterion[i] | tojson | safe }});
+                    }
+                {% endfor %}
+
+                // Biểu đồ góp phần của tiêu chí vào trọng số phương án
+                const criteriaColors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'];
+                const contributionData = {{ result.criteria_names | tojson | safe }}.map((crit, i) => ({
+                    label: crit,
+                    data: {{ result.alternative_names | tojson | safe }}.map((_, j) => {
+                        const weight = {{ result.alt_weights_per_criterion | tojson | safe }}[i][j];
+                        const critWeight = {{ result.criteria_matrix.trong_so | tojson | safe }}[i];
+                        return (typeof weight === 'number' && typeof critWeight === 'number' && !isNaN(weight) && !isNaN(critWeight)) ? weight * critWeight : 0;
+                    }),
+                    backgroundColor: criteriaColors[i % criteriaColors.length],
+                    borderColor: criteriaColors[i % criteriaColors.length],
+                    borderWidth: 1
+                }));
+                if (contributionData.every(ds => isValidData(ds.data))) {
+                    new Chart(document.getElementById('criteriaContributionChart'), {
+                        type: 'bar',
+                        data: {
+                            labels: {{ result.alternative_names | tojson | safe }},
+                            datasets: contributionData
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: {
+                                    title: { display: true, text: 'Phương án', font: { size: 16 } },
+                                    ticks: { font: { size: 14 } }
+                                },
+                                y: {
+                                    stacked: true,
+                                    beginAtZero: true,
+                                    title: { display: true, text: 'Góp phần (Trọng số tiêu chí × Trọng số phương án)', font: { size: 16 } },
+                                    ticks: { font: { size: 14 } }
+                                }
+                            },
+                            plugins: {
+                                legend: { 
+                                    display: true,
+                                    position: 'top',
+                                    labels: {
+                                        font: { family: 'Arial, "DejaVu Sans", sans-serif', size: 14 },
+                                        padding: 20
+                                    }
+                                },
+                                tooltip: {
+                                    titleFont: { size: 14 },
+                                    bodyFont: { size: 14 },
+                                    callbacks: {
+                                        label: function(context) {
+                                            return `${context.dataset.label} → ${context.label}: ${context.raw.toFixed(4)}`;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                } else {
+                    console.warn('Dữ liệu cho biểu đồ góp phần không hợp lệ:', contributionData);
+                }
+            {% endif %}
+
+            {% if result.ranking %}
+                // Biểu đồ xếp hạng
+                const ranking = {{ result.ranking | tojson | safe }};
+                if (isValidRanking(ranking)) {
+                    const rankingScores = ranking.map(item => item.score);
+                    const rankingLabels = ranking.map(item => item.name);
+                    new Chart(document.getElementById('rankingChart'), {
+                        type: 'bar',
+                        data: {
+                            labels: rankingLabels,
+                            datasets: [{
+                                label: 'Điểm số',
+                                data: rankingScores,
+                                backgroundColor: '#36A2EB',
+                                borderColor: '#1E90FF',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    title: { display: true, text: 'Điểm số', font: { size: 16 } },
+                                    ticks: { font: { size: 14 } }
+                                },
+                                x: {
+                                    title: { display: true, text: 'Phương án', font: { size: 16 } },
+                                    ticks: { font: { size: 14 } }
+                                }
+                            },
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    titleFont: { size: 14 },
+                                    bodyFont: { size: 14 },
+                                    callbacks: {
+                                        label: function(context) {
+                                            return `${context.label}: ${context.raw.toFixed(4)}`;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    // Biểu đồ tròn điểm số xếp hạng
+                    new Chart(document.getElementById('rankingPieChart'), {
+                        type: 'pie',
+                        data: {
+                            labels: rankingLabels,
+                            datasets: [{
+                                data: rankingScores,
+                                backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'],
+                                borderColor: '#FFFFFF',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                    labels: {
+                                        font: { family: 'Arial, "DejaVu Sans", sans-serif', size: 14 },
+                                        padding: 20
+                                    }
+                                },
+                                tooltip: {
+                                    titleFont: { size: 14 },
+                                    bodyFont: { size: 14 },
+                                    callbacks: {
+                                        label: function(context) {
+                                            let value = context.raw;
+                                            let sum = context.dataset.data.reduce((a, b) => a + b, 0);
+                                            let percentage = ((value / sum) * 100).toFixed(1);
+                                            return `${context.label}: ${value.toFixed(4)} (${percentage}%)`;
+                                        }
+                                    }
+                                },
+                                datalabels: {
+                                    formatter: (value, context) => {
+                                        let sum = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        let percentage = ((value / sum) * 100).toFixed(1);
+                                        return percentage >= 5 ? `${percentage}%` : '';
+                                    },
+                                    color: '#FFFFFF',
+                                    font: { weight: 'bold', size: 14 },
+                                    textAlign: 'center'
+                                }
+                            }
+                        }
+                    });
+                } else {
+                    console.warn('Dữ liệu xếp hạng không hợp lệ:', ranking);
+                }
+            {% endif %}
+        });
+    </script>
+</body>
+</html>

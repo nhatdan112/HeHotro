@@ -1,0 +1,125 @@
+body {
+    font-family: 'Roboto', sans-serif;
+    background-color: #f8f9fa;
+}
+
+.navbar {
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+    font-size: 1.25rem;
+    background-color: #007bff;
+    color: white;
+}
+
+.table th, .table td {
+    vertical-align: middle;
+    text-align: center;
+}
+
+.table-hover tbody tr:hover {
+    background-color: #f1f5f9;
+}
+
+.card {
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+    border-color: #0056b3;
+}
+
+.btn-success {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+.btn-success:hover {
+    background-color: #218838;
+    border-color: #218838;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    border-color: #dc3545;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+    border-color: #c82333;
+}
+
+.btn-warning {
+    background-color: #ffc107;
+    border-color: #ffc107;
+}
+
+.btn-warning:hover {
+    background-color: #e0a800;
+    border-color: #e0a800;
+}
+
+footer {
+    position: relative;
+    bottom: 0;
+    width: 100%;
+}
+
+/* Điều chỉnh khoảng cách giữa các card trong các cột */
+.col-md-3 .card, .col-md-4 .card, .col-md-5 .card {
+    margin-bottom: 2rem;
+}
+
+/* Đảm bảo bảng trong cột hẹp không bị quá nhỏ */
+.table-responsive {
+    min-height: 150px; /* Đảm bảo bảng có chiều cao tối thiểu */
+}
+
+/* Điều chỉnh kích thước chữ cho các cột */
+.col-md-3 .table th, .col-md-3 .table td,
+.col-md-4 .table th, .col-md-4 .table td {
+    font-size: 0.9rem; /* Giảm kích thước chữ cho cột hẹp */
+}
+
+.col-md-5 .table th, .col-md-5 .table td {
+    font-size: 1rem; /* Giữ kích thước chữ lớn hơn cho cột giữa */
+}
+
+/* Điều chỉnh padding trong card-body cho cột hẹp */
+.col-md-3 .card-body {
+    padding: 1rem; /* Giảm padding cho cột hẹp */
+}
+
+/* Định dạng cho biểu đồ */
+.chart-container {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.chart-container img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Định dạng cho tab Tình hình tài chính */
+#finance-table .text-success {
+    color: #28a745;
+}
+
+#finance-table .text-danger {
+    color: #dc3545;
+}
